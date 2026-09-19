@@ -1,23 +1,30 @@
-#define F_CPU 16000000UL   // the UNO's clock runs at 16 MHz; delay needs to know this
-#include <avr/io.h>        // defines the register names (DDRB, PORTB…) for this chip
-#include <util/delay.h>    // provides _delay_ms()
+#define F_CPU 16000000UL
+#include <avr/io.h>
+// no more <util/delay.h> — we've retired _delay_ms()
 
 int main(void) {
-    // 1. Make PB5 an output:
-    // >>> your line here
-	DDRB |= (1 << 5); //sets ddrb as output
+    // LED pin (PB5) as output — unchanged from blink
+    DDRB |= (1 << PB5);
+
+    // --- Timer1 setup ---
+    TCCR1A = 0;   // given: no output-pin behavior; the mode is finished in TCCR1B
+
+    //In TCCR1B,VCTC mode (WGM12) AND the /256 prescaler (CS12), together:
+	TCCR1B = (1 << WGM12) | (1 << CS12);
+
+    //the 500 ms compare target into OCR1A:
+	OCR1A = 31249;
 
     while (1) {
-        // 2. Turn the LED on:
-        // >>> your line here
-	PORTB |= (1 << 5); //turns on the led
-        _delay_ms(500);
+        //is the OCF1A flag in TIFR1 set?
+        if (TIFR1 & (1 << OCF1A) ) {
 
-        // 3. Turn the LED off:
-        // >>> your line here
-	PORTB &= ~(1 << 5); //turns off the led
-        _delay_ms(500);
+            //writes a 1 to OCF1A, using =
+		TIFR1 = (1 << OCF1A);
+
+            //Toggle the LED (flip PB5):
+		PORTB ^= (1 << PB5); 
+        }
     }
-
-    return 0;   // never reached
+    return 0;
 }
