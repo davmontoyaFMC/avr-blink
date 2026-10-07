@@ -1,30 +1,28 @@
 #define F_CPU 16000000UL
 #include <avr/io.h>
-// no more <util/delay.h> — we've retired _delay_ms()
+#include <avr/interrupt.h>   // NEW: gives us ISR() and sei()
 
 int main(void) {
-    // LED pin (PB5) as output — unchanged from blink
-    DDRB |= (1 << PB5);
+    DDRB |= (1 << PB5);              // LED pin as output
 
-    // --- Timer1 setup ---
-    TCCR1A = 0;   // given: no output-pin behavior; the mode is finished in TCCR1B
+    // --- Timer1 setup---
+    TCCR1A = 0;
+    TCCR1B |= (1 << WGM12) | (1 << CS12);   // CTC + /256 prescaler
+    OCR1A = 31249;                          // 500 ms target
 
-    //In TCCR1B,VCTC mode (WGM12) AND the /256 prescaler (CS12), together:
-	TCCR1B = (1 << WGM12) | (1 << CS12);
+    //Enable the Timer1 compare-match-A interrupt:
+	TIMSK1 |= (1 << OCIE1A);
 
-    //the 500 ms compare target into OCR1A:
-	OCR1A = 31249;
+    sei();   //flip the global interrupt master switch on
 
     while (1) {
-        //is the OCF1A flag in TIFR1 set?
-        if (TIFR1 & (1 << OCF1A) ) {
-
-            //writes a 1 to OCF1A, using =
-		TIFR1 = (1 << OCF1A);
-
-            //Toggle the LED (flip PB5):
-		PORTB ^= (1 << PB5); 
-        }
+        // This emptiness IS the milestone.
     }
     return 0;
+}
+
+// The ISR — runs automatically every time Timer1 hits OCR1A.
+ISR(TIMER1_COMPA_vect) {
+    //Toggle the LED:
+	PORTB ^= (1 << PB5);
 }
